@@ -1,0 +1,43 @@
+FROM centos:7.4.1708
+MAINTAINER Tang linbin <tanglb1024@163.com>
+
+#base package
+RUN rpm --import https://packages.elastic.co/GPG-KEY-elasticsearch \
+  && yum -y install epel-release \
+  && yum -y install wget redhat-lsb initscripts.x86_64 python-pip php-pear php-devel httpd-devel pcre-devel \
+  && pip install supervisor
+
+#install nginx and php7
+RUN cd /tmp \
+  && wget http://soft.vpser.net/lnmp/lnmp1.5.tar.gz -cO lnmp1.5.tar.gz && tar zxf lnmp1.5.tar.gz && cd lnmp1.5 && LNMP_Auto="y" DBSelect="0" PHPSelect="8" SelectMalloc="1" ./install.sh lnmp \
+  && yum clean all \
+  && rm -rf /var/cache/yum \
+  && rm -rf /tmp/*
+
+#php extensions
+RUN pecl channel-update pecl.php.net \
+  && pecl install -f mongodb redis
+
+#upload files
+COPY upload/ /root/upload/
+
+RUN cp -f /root/upload/supervisord-sshd.conf /etc/supervisord.conf \
+  && cp -f /root/upload/fastcgi.conf /usr/local/nginx/conf/fastcgi.conf \
+  && cp -f /root/upload/nginx.conf /usr/local/nginx/conf/nginx.conf \
+  && cp -f /root/upload/site.conf /usr/local/nginx/conf/vhost/site.conf
+
+# install node
+RUN yum install -y make gcc-c++ \
+  && curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash \
+  && source ~/.bash_profile \
+  && nvm i 8.14.0 \
+  && nvm alias default 8.14.0
+
+RUN yum install -y openssh-server openssh-clients \
+# generate host keys if not present
+  && ssh-keygen -A \
+  && echo 'root:changeme' | chpasswd
+
+EXPOSE 22 80
+
+CMD ["supervisord", "-n", "-c",  "/etc/supervisord.conf"]
