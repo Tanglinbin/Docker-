@@ -5,6 +5,9 @@ MAINTAINER Tang linbin <tanglb1024@163.com>
 RUN rpm --import https://packages.elastic.co/GPG-KEY-elasticsearch \
   && yum -y install epel-release \
   && yum -y install wget redhat-lsb initscripts.x86_64 python-pip php-pear php-devel httpd-devel pcre-devel \
+  && yum clean all \
+  && rm -rf /var/cache/yum \
+  && rm -rf /tmp/*
   && pip install supervisor
 
 #install nginx and php7
@@ -21,22 +24,29 @@ RUN pecl channel-update pecl.php.net \
 #upload files
 COPY upload/ /root/upload/
 
-RUN cp -f /root/upload/supervisord-sshd.conf /etc/supervisord.conf \
-  && cp -f /root/upload/fastcgi.conf /usr/local/nginx/conf/fastcgi.conf \
-  && cp -f /root/upload/nginx.conf /usr/local/nginx/conf/nginx.conf \
-  && cp -f /root/upload/site.conf /usr/local/nginx/conf/vhost/site.conf
+RUN cp -f upload/supervisord-sshd.conf /etc/supervisord.conf \
+  && cp -f upload/fastcgi.conf /usr/local/nginx/conf/fastcgi.conf \
+  && cp -f upload/nginx.conf /usr/local/nginx/conf/nginx.conf \
+  && cp -f upload/site.conf /usr/local/nginx/conf/vhost/site.conf
 
 # install node
 RUN yum install -y make gcc-c++ \
+  && yum clean all \
+  && rm -rf /var/cache/yum \
+  && rm -rf /tmp/* \
   && curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash \
   && source ~/.bash_profile \
   && nvm i 8.14.0 \
   && nvm alias default 8.14.0
 
 RUN yum install -y openssh-server openssh-clients \
-# generate host keys if not present
+  && yum clean all \
+  && rm -rf /var/cache/yum \
+  && rm -rf /tmp/* \
+  # generate host keys if not present
   && ssh-keygen -A \
   && echo 'root:changeme' | chpasswd
+  
 
 EXPOSE 22 80
 
